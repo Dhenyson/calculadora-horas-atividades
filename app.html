@@ -1,0 +1,304 @@
+<html>
+<head>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+
+    .container {
+      width: 500px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    .inputs-nova-atividade, .importar-exportar-area {
+      display: flex;
+    }
+
+    .importar-exportar-area {
+      margin-top: 20px;
+    }
+
+    .importar-exportar-area button {
+      margin: 10px;
+    }
+
+    .inputs-nova-atividade #tempo {
+      max-width: 80px;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    li {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid #ccc;
+    }
+
+    .tempo-descricao {
+      flex-grow: 1;
+    }
+
+    .remover {
+      width: 70px;
+      margin-left: 10px;
+      background-color: #dc3545;
+    }
+
+    .total {
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Calculadora de horas por atividade</h1>
+
+    <p class="total">Total de horas: <span id="total-horas">0</span></p>
+    <p class="total">Valor total: R$<span id="valor-total">0</span></p>
+
+    <p>Insira o valor recebido em R$:</p>
+    <input type="number" id="valor-recebido" placeholder="R$">
+
+    <p class="total">Valor a receber: R$<span id="valor-receber">0</span></p>
+
+    <p>Insira o valor da sua hora de trabalho:</p>
+    <input type="number" id="valor-hora" placeholder="R$">
+    <button id="recalcular">Recalcular</button>
+
+    <p>Insira o tempo e a descrição da atividade:</p>
+    <div class="inputs-nova-atividade">
+      <input type="text" id="tempo" placeholder="HH:MM">
+      <input type="text" id="descricao" placeholder="Descrição">
+    </div>
+    <button id="adicionar">Adicionar atividade</button>
+
+    <div class="importar-exportar-area">
+      <button id="importar">Importar lista</button>
+      <button id="exportar">Exportar lista</button>
+    </div>
+
+
+    <ul id="atividades"></ul>
+    
+  </div>
+  <script>
+    // Selecionar os elementos do DOM
+    var valorHora = document.getElementById("valor-hora");
+    var tempo = document.getElementById("tempo");
+    var descricao = document.getElementById("descricao");
+    var adicionar = document.getElementById("adicionar");
+    var recalcular = document.getElementById("recalcular");
+    var atividades = document.getElementById("atividades");
+    var totalHoras = document.getElementById("total-horas");
+    var valorTotal = document.getElementById("valor-total");
+    var valorRecebido = document.getElementById("valor-recebido");
+    var valorReceber = document.getElementById("valor-receber");
+
+    // Criar uma variável para armazenar as atividades
+    var listaAtividades = [];
+
+    // Criar uma função para converter o tempo em minutos
+    function converterTempo(tempo) {
+      var partes = tempo.split(":"); // separar as horas dos minutos
+      var horas = parseInt(partes[0]); // converter as horas em número inteiro
+      var minutos = parseInt(partes[1]); // converter os minutos em número inteiro
+      return horas * 60 + minutos; // retornar o total de minutos
+    }
+
+    // Criar uma função para validar o formato da hora
+    function validarHora(hora) {
+      var regex = /^\d{2}:\d{2}$/; // criar uma expressão regular para verificar se a hora está no padrão HH:MM
+      return regex.test(hora); // retornar verdadeiro ou falso se a hora é válida ou não
+    }
+
+    // Criar uma função para calcular o total de horas, o valor total, o valor recebido e o valor a receber
+    function calcularTotais() {
+      var somaMinutos = 0; // criar uma variável para armazenar a soma dos minutos
+      for (var i = 0; i < listaAtividades.length; i++) { // percorrer a lista de atividades
+        somaMinutos += listaAtividades[i].tempo; // somar o tempo de cada atividade
+      }
+      var horas = Math.floor(somaMinutos / 60); // calcular as horas inteiras
+      var minutos = somaMinutos % 60; // calcular os minutos restantes
+      totalHoras.textContent = horas + ":" + (minutos < 10 ? "0" + minutos : minutos); // atualizar o texto do total de horas
+      var valorHoraNumerico = parseFloat(valorHora.value); // converter o valor da hora em número decimal
+      var valorTotalNumerico = somaMinutos * valorHoraNumerico / 60; // calcular o valor total em reais
+      valorTotal.textContent = valorTotalNumerico.toFixed(2); // atualizar o texto do valor total com duas casas decimais
+      var valorRecebidoNumerico = parseFloat(valorRecebido.value) || 0; // converter o valor recebido em número decimal ou usar zero se for vazio
+      var valorReceberNumerico = valorTotalNumerico - valorRecebidoNumerico; // calcular o valor a receber em reais
+      valorReceber.textContent = valorReceberNumerico.toFixed(2); // atualizar o texto do valor a receber com duas casas decimais
+    }
+
+    // Criar uma função para remover uma atividade da lista
+    function removerAtividade(event) {
+      var li = event.target.parentNode; // obter o elemento li que contém o botão remover
+      var index = Array.from(atividades.children).indexOf(li); // obter o índice do li na lista ul
+      listaAtividades.splice(index, 1); // remover a atividade da lista
+      atividades.removeChild(li); // remover o li da lista ul
+      calcularTotais(); // chamar a função para calcular os totais
+    }
+
+    // Criar uma função para adicionar uma atividade na lista
+    function adicionarAtividade() {
+      var tempoValor = tempo.value; // obter o valor do tempo
+      var descricaoValor = descricao.value; // obter o valor da descrição
+      if (tempoValor && descricaoValor && validarHora(tempoValor)) { // verificar se os valores são válidos e se a hora está no formato correto
+        var tempoNumerico = converterTempo(tempoValor); // converter o tempo em minutos
+        var atividade = { // criar um objeto para representar a atividade
+          tempo: tempoNumerico,
+          descricao: descricaoValor
+        };
+        listaAtividades.push(atividade); // adicionar a atividade na lista
+        var li = document.createElement("li"); // criar um elemento li
+        var span = document.createElement("span"); // criar um elemento span
+        span.textContent = tempoValor + " - " + descricaoValor; // definir o texto do span
+        span.className = "tempo-descricao"; // adicionar uma classe ao span
+        var button = document.createElement("button"); // criar um elemento button
+        button.textContent = "Remover"; // definir o texto do button
+        button.className = "remover"; // adicionar uma classe ao button
+        button.addEventListener("click", removerAtividade); // adicionar um evento de clique no button
+        li.appendChild(span); // adicionar o span no li
+        li.appendChild(button); // adicionar o button no li
+        atividades.appendChild(li); // adicionar o li na lista ul
+        tempo.value = ""; // limpar o campo do tempo
+        descricao.value = ""; // limpar o campo da descrição
+        calcularTotais(); // chamar a função para calcular os totais
+      } else { // se os valores não são válidos ou se a hora não está no formato correto
+        alert("Por favor, preencha o tempo e a descrição da atividade e use o formato HH:MM para o tempo."); // mostrar uma mensagem de alerta
+      }
+    }
+
+    // Adicionar um evento de clique no botão adicionar
+    adicionar.addEventListener("click", adicionarAtividade);
+
+    // Adicionar um evento de mudança no campo do valor recebido, do valor da hora ou do botão recalcular 
+    valorRecebido.addEventListener("change", calcularTotais);
+    valorHora.addEventListener("change", calcularTotais);
+    recalcular.addEventListener("click", calcularTotais);
+
+    function obterAtividadesFormatadas() {
+      if (listaAtividades.length > 0) { // verificar se a lista não está vazia
+
+        var atividadesFormatadas = listaAtividades.map(function(atividade) {
+          var horas = Math.floor(atividade.tempo / 60); // calcular horas
+          var minutos = atividade.tempo % 60; // calcular minutos
+          var tempoFormatado = (horas < 10 ? "0" : "") + horas + ":" + (minutos < 10 ? "0" : "") + minutos;
+            return {
+              tempo: tempoFormatado,
+              descricao: atividade.descricao
+            };
+          });
+
+          return atividadesFormatadas;
+      } else { // se a lista está vazia
+        return [];
+      }
+    }
+
+  // Criar uma função para exportar a lista de atividades em um arquivo JSON 
+  function exportarLista() {
+    var atividadesFormatadas = obterAtividadesFormatadas();
+    if (atividadesFormatadas.length == 0) {
+      alert("Não há atividades para exportar."); // mostrar uma mensagem de alerta
+      return;
+    }
+
+    var data = JSON.stringify(atividadesFormatadas); // converter a lista em uma string JSON
+    var blob = new Blob([data], {type: "application/json"}); // criar um objeto blob com o tipo de arquivo JSON
+    var url = URL.createObjectURL(blob); // criar uma URL para o blob
+    var link = document.createElement("a"); // criar um elemento a
+    link.href = url; // definir o atributo href do link com a URL do blob
+    link.download = "lista-atividades.json"; // definir o atributo download do link com o nome do arquivo
+    link.click(); // simular um clique no link
+    URL.revokeObjectURL(url); // liberar a URL do blob
+  }
+
+// Criar uma função para importar a lista de atividades de um arquivo JSON 
+function importarLista() {
+  var input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json";
+
+  input.addEventListener("change", function(event) {
+    var file = event.target.files[0];
+    if (file) {
+      var reader = new FileReader();
+      reader.readAsText(file);
+      reader.onload = function() {
+        try {
+          var data = JSON.parse(reader.result);
+          if (Array.isArray(data) && data.length > 0) {
+            listaAtividades = [];
+            atividades.innerHTML = "";
+
+            for (var i = 0; i < data.length; i++) {
+              var atividade = data[i];
+              var tempoFormatado = atividade.tempo; // manter o formato do tempo do arquivo JSON
+
+              if (tempoFormatado && atividade.descricao && validarHora(tempoFormatado)) {
+                var tempoNumerico = converterTempo(tempoFormatado);
+                atividade.tempo = tempoNumerico;
+                listaAtividades.push(atividade);
+                var li = document.createElement("li");
+                var span = document.createElement("span");
+                span.textContent = tempoFormatado + " - " + atividade.descricao; // usar o formato original do tempo
+                span.className = "tempo-descricao";
+                var button = document.createElement("button");
+                button.textContent = "Remover";
+                button.className = "remover";
+
+                button.addEventListener("click", removerAtividade);
+                li.appendChild(span);
+                li.appendChild(button);
+                atividades.appendChild(li);
+              } else {
+                throw new Error("Formato inválido");
+              }
+            }
+            calcularTotais();
+          } else {
+            throw new Error("Formato inválido");
+          }
+        } catch (error) {
+          alert("Ocorreu um erro ao importar a lista: " + error.message);
+        }
+      };
+    }
+  });
+
+  input.click();
+}
+
+
+
+// Adicionar um evento de clique nos botões de importar e exportar
+importar.addEventListener("click", importarLista);
+exportar.addEventListener("click", exportarLista);
+
+  </script>
+</body>
+</html>
